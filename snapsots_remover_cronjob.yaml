@@ -1,0 +1,69 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rescuesnapshot
+  namespace: fleet-default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rescuesnapshot
+  template:
+    metadata:
+      labels:
+        app: rescuesnapshot
+    spec:
+      serviceAccountName: rescuesnapshot-sa
+      containers:
+      - name: rescuesnapshot
+        image: dmarshaltu/rescue_snapshot:0.1.0
+        imagePullPolicy: Always
+        ports:
+        - name: metrics
+          containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rescuesnapshot-metrics
+  namespace: fleet-default
+  labels:
+    app: rescuesnapshot
+spec:
+  selector:
+    app: rescuesnapshot
+  ports:
+  - name: metrics
+    port: 8000
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: rescuesnapshot-sa
+  namespace: fleet-default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: fleet-default
+  name: rescuesnapshot-role
+rules:
+- apiGroups: ["rke.cattle.io"]
+  resources: ["etcdsnapshots"]
+  verbs: ["get", "list", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: rescuesnapshot-rolebinding
+  namespace: fleet-default
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: rescuesnapshot-role
+subjects:
+- kind: ServiceAccount
+  name: rescuesnapshot-sa
+  namespace: fleet-default
+
